@@ -5,5 +5,8 @@ export default defineNuxtConfig({
   modules: ['@nuxt/ui'],
   build: {
     transpile: ["@vuepic/vue-datepicker"],
+  },
+  colorMode: {
+    preference: 'light'
   }
 })

@@ -30,7 +30,8 @@ export default {
             dutyStation: 'NY',
             date: null,
             selectedDate: ref(),
-            isLoading: false
+            isLoading: false,
+            q: null
         }
     },
     async created() {
@@ -42,9 +43,23 @@ export default {
         this.date = yesterday()
         this.selectedDate = this.date.replace(/-/g, "/")
     },
+    computed: {
+        filteredRows: function() {
+            if (!this.q) {
+                return this.symbolData
+            }
+            //console.log(this.q)
+            return this.symbolData.filter((symbols) => {
+                return Object.values(symbols).some((value) => {
+                    return String(value).toLowerCase().includes(this.q.toLowerCase())
+                })
+            })      
+        }
+    },
     methods: {
         async onSubmit() {
             console.log("submitting")
+            this.symbolData = []
             this.isLoading = true
             fetch(`${this.apiUrl}/?duty_station=${this.dutyStation}&date=${this.date}`)
                 .then(response => {
@@ -89,11 +104,13 @@ const state = reactive({
                 </div>
             </UForm>
         </UCard>
-            <UTable :loading="isLoading"
-                :loadingstate="{ icon: 'i-heroicons-arrow-path-20-solid', label: 'Loading...' }"
-                :progress="{ color: 'primary', animation: 'carousel' }" class="min-w-full" :columns="columns"
-                :rows="symbolData" :ui="{ td: { base: 'max-w-[0] text-balance' } }" />
+        <UInput v-model="q" placeholder="Filter results..." />
+        <UTable :loading="isLoading"
+            :loadingstate="{ icon: 'i-heroicons-arrow-path-20-solid', label: 'Loading...' }"
+            :progress="{ color: 'primary', animation: 'carousel' }" class="min-w-full" :columns="columns"
+            :rows="filteredRows" :ui="{ td: { base: 'max-w-[0] text-balance' } }" />
 
         <pre>{{ [dutyStation, date] }}</pre>
+        <pre>{{ symbolData  }}</pre>
     </UContainer>
 </template>

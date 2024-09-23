@@ -86,23 +86,23 @@ def get_symbol_list(date: str = yesterday, duty_station = 'NY'):
     g.set_param('DownloadFiles', 'N')
 
     symbol_objects = {}
-    try:
-        for d in g.data:
-            m = MetadataObject(d)
-            f = f'{FileObject(d).languageId}: {FileObject(d).odsNo}'
+    #try:
+    for d in g.data:
+        m = MetadataObject(d)
+        f = f'{FileObject(d).languageId}: {FileObject(d).odsNo}'
 
-            if m.symbol1 not in symbol_objects:
-                m.files.append(f)
-                symbol_objects[m.symbol1] = m
-            else:
-                symbol_objects[m.symbol1].files.append(f)
+        if m.symbol1 not in symbol_objects:
+            m.files.append(f)
+            symbol_objects[m.symbol1] = m
+        else:
+            symbol_objects[m.symbol1].files.append(f)
 
-        #return symbol_objects
+    #return symbol_objects
 
-        return_data = []
-        for s in symbol_objects:
-            return_data.append(symbol_objects[s])
-    except Exception as e:
-        return e
+    return_data = []
+    for s in symbol_objects:
+        return_data.append(symbol_objects[s])
+    #except Exception as e:
+    #    return e
 
     return return_data

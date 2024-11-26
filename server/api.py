@@ -1,20 +1,37 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from gdoc_api import Gdoc
 from enum import Enum
+from urllib.parse import unquote
 import boto3
 import datetime
 import json
+import os
+import requests
+from dlx import DB as DLX
+from dlx.file import File as DLXFile, Identifier
+from xml.dom import minidom
 
 # Change this to reflect updates to your environment
 class Config(object):
     client = boto3.client('ssm')
-    api_secrets = client.get_parameter(Name='gdoc-api-secrets')['Parameter']['Value']
+    env = os.getenv('GDOC_ENV', "qa")
+    api_secrets = json.loads(client.get_parameter(Name=f'gdoc-{env}-api-secrets')['Parameter']['Value'])
+    connect_string_param = api_secrets['connect_string_param']
+    #connect_string = client.get_parameter(Name=connect_string_param)['Parameter']['Value']
+    # Normally we should be able to get this from the above value, but
+    # this is in a hybrid configuration at the moment.
     connect_string = client.get_parameter(Name='prodISSU-admin-connect-string')['Parameter']['Value']
-    dbname = "undlFiles"
+    dbname = api_secrets['database_name']
     dlx_endpoint = 'https://metadata.un.org/editor/'
+    # Bibs search only
+    dlx_api_endpoint = 'https://metadata.un.org/editor/api/marc/bibs/records'
     duty_stations = [
         ('New York', 'NY'),
-        ('Geneva', 'GE')
+        ('Geneva', 'GE'),
+        ('Vienna', 'Vienna'),
+        ('Nairobi', 'Nairobi'),
+        ('Beirut', 'Beirut')
     ]
 
 class MetadataObject(object):
@@ -53,25 +70,44 @@ class FileObject(object):
         self.officialSubmissionDate = metadata['officialSubmissionDate']
 
 DutyStations = [
-    "NY", "GE", "Vienna", "Beirut", "Nairobi"
+    "New York", "NY", "Geneva", "Vienna", "Beirut", "Nairobi"
 ]
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://0.0.0.0:3000"],  
+ 
+  # Replace with your Nuxt app's URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Date setup
 today = datetime.date.today()
 yesterday = str(today - datetime.timedelta(days=1))
 
 # Secrets
-secrets = json.loads(Config.api_secrets)
+secrets = Config.api_secrets
+
+db_client = DLX.connect(Config.connect_string, database=Config.dbname)
+print(f"Connected to: {Config.connect_string.split('@')[1].split('/')[0]}")
 
 @app.get("/")
-def get_symbol_list(date: str = yesterday, duty_station = 'NY'):
-    if (duty_station not in DutyStations):
+def get_symbol_list(date: str = yesterday, dutyStation: str = 'NY'):
+    print(unquote(dutyStation))
+    if (dutyStation not in DutyStations):
         return {"msg": f"Invalid duty station. Valid values are {', '.join(DutyStations)}"}
+    if (unquote(dutyStation) == "New York"):
+        dutyStation = "NY"
+    if (dutyStation == "Geneva"):
+        dutyStation = "GE"
 
-    g = Gdoc(username=secrets["username"], password=secrets["password"])
-    g.set_param('dutyStation', duty_station)
+
+    g = Gdoc(client_id=secrets["client_id"], client_secret=secrets["client_secret"], token_url=secrets['token_url'], api_url=secrets['api_url'], ocp_apim_subscription_key=secrets['ocp_apim_subscription_key'], scope=secrets['scope'])
+    g.set_param('dutyStation', dutyStation)
     g.set_param('dateFrom', str(date))
     g.set_param('dateTo', str(date))
     g.set_param('DownloadFiles', 'N')
@@ -92,4 +128,68 @@ def get_symbol_list(date: str = yesterday, duty_station = 'NY'):
     for s in symbol_objects:
         return_data.append(symbol_objects[s])
 
+    return return_data
+
+@app.get("/symbol")
+def get_symbol_data(symbol: str):
+    return_data = {}
+    this_symbol = Identifier('symbol',symbol)
+    dlx_url = None
+    for f in DLXFile.find_by_identifier_language(this_symbol, 'en'):
+        dlx_url = f'{Config.dlx_endpoint}api/files/{f.id}?action=open'
+    if dlx_url is not None:
+        return_data['dlx'] = dlx_url
+
+    undl_url = None
+    response = requests.get(f'https://digitallibrary.un.org/search?p={symbol}&of=xm&ot=001,191,856')
+    doc = minidom.parseString(response.text)
+    total_results = 0
+    for comment in doc.childNodes:
+        if comment.nodeType == minidom.Node.COMMENT_NODE:
+            total_results = int(comment.nodeValue.split(":")[1].strip())
+            break
+    # Find the record element
+    record_element = doc.getElementsByTagName("record")[0]
+
+    # Find the English file if it exists; return 001 otherwise
+    controlfield_element = None
+    
+    for element in record_element.childNodes:
+        try:
+            if element.tagName == "controlfield" and element.getAttribute("tag") == "001":
+                controlfield_element = element
+                break
+        except AttributeError:
+            pass
+    
+    found_files = []
+    for element in record_element.childNodes:
+        u = None
+        y = None
+        try:
+            if element.tagName == "datafield" and element.getAttribute("tag") == "856":
+                print(element)
+                for subfield in element.childNodes:
+                    print(subfield)
+                    if subfield.getAttribute("code") == "y":
+                        y = subfield.nodeValue
+                        print("y", y)
+                    if subfield.getAttribute("code") == "u":
+                        u = subfield.nodeValue
+                        print("u", u)
+                    if y is not None and u is not None:
+                        found_files.append({"lang": y, "url": u})
+        except AttributeError:
+            pass
+
+    # Extract the value from the controlfield element
+    controlfield_value = None
+    if controlfield_element:
+        controlfield_value = controlfield_element.firstChild.nodeValue
+
+    # Print the results
+    print(f"Total number of results: {total_results}")
+    print(f"Controlfield value (tag 001): {controlfield_value}")
+    print(found_files)
+    
     return return_data

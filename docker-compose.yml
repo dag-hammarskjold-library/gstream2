@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  nuxt:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+
+  fastapi:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - '8000:8000'
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}  
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - GDOC_ENV=${GDOC_ENV}
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - '80:80'
+    depends_on:
+      - nuxt
+      - fastapi

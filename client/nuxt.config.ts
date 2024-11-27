@@ -5,7 +5,8 @@ export default defineNuxtConfig({
   modules: ['dayjs-nuxt', '@nuxtjs/tailwindcss'],
   runtimeConfig: {
     public: {
-      apiBase: 'http://localhost:8000'
+      // Override this variable by passing NUXT_PUBLIC_API_BASE="//whatever" to your script invocation
+      apiBase: 'http://localhost:8000/api'
     }
   },
   app: {

@@ -1,6 +1,6 @@
 export interface DocumentFile {
-    language: string
-    id: string
+    languageId: string
+    odsNo: string
 }
 
 export interface Document {

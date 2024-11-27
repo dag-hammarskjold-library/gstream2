@@ -1,5 +1,7 @@
 import { ref, type Ref } from 'vue'
+import type { Document } from '~/types/document'
 
+/*
 interface Document {
     symbol1: string
     symbol2: string
@@ -7,6 +9,7 @@ interface Document {
     files: Array<{ language: string, id: string }>
     links?: any
 }
+*/
 
 export function useDocuments() {
     const documents: Ref<Document[]> = ref([])

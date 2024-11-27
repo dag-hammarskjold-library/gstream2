@@ -19,13 +19,13 @@
                     <td class="px-6 py-4 whitespace-nowrap">{{ doc.symbol2 }}</td>
                     <td class="px-6 py-4">{{ doc.title }}</td>
                     <td class="px-6 py-4">
-                        <span v-for="file in doc.files" :key="file.id" class="inline-block mr-2">
-                            {{ file.language }}
+                        <span v-for="file in doc.files" :key="file.odsNo" class="inline-block mr-2">
+                            {{ file.languageId }}: {{ file.odsNo }}
                         </span>
                     </td>
                     <td class="px-6 py-4">
                         <p v-for="link in doc.links">
-                            <a :href="link['url']">{{ link['name'] }}</a>
+                            <a :href="link['url']" target="_blank">{{ link['name'] }}</a>
                         </p>
                         <!--<pre class="text-sm">{{ JSON.stringify(doc.links, null, 2) }}</pre>-->
                     </td>

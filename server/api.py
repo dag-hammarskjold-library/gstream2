@@ -132,64 +132,59 @@ def get_symbol_list(date: str = yesterday, dutyStation: str = 'NY'):
 
 @app.get("/symbol")
 def get_symbol_data(symbol: str):
-    return_data = {}
+    return_data = []
     this_symbol = Identifier('symbol',symbol)
     dlx_url = None
     for f in DLXFile.find_by_identifier_language(this_symbol, 'en'):
         dlx_url = f'{Config.dlx_endpoint}api/files/{f.id}?action=open'
     if dlx_url is not None:
-        return_data['dlx'] = dlx_url
+        return_data.append({'name': 'dlx', 'url': dlx_url})
 
     undl_url = None
-    response = requests.get(f'https://digitallibrary.un.org/search?p={symbol}&of=xm&ot=001,191,856')
+    response = requests.get(f'https://digitallibrary.un.org/search?p=191:{symbol}&of=xm&ot=001,191,856')
     doc = minidom.parseString(response.text)
     total_results = 0
     for comment in doc.childNodes:
         if comment.nodeType == minidom.Node.COMMENT_NODE:
             total_results = int(comment.nodeValue.split(":")[1].strip())
             break
-    # Find the record element
-    record_element = doc.getElementsByTagName("record")[0]
-
-    # Find the English file if it exists; return 001 otherwise
-    controlfield_element = None
     
-    for element in record_element.childNodes:
-        try:
-            if element.tagName == "controlfield" and element.getAttribute("tag") == "001":
-                controlfield_element = element
-                break
-        except AttributeError:
-            pass
-    
-    found_files = []
-    for element in record_element.childNodes:
-        u = None
-        y = None
-        try:
-            if element.tagName == "datafield" and element.getAttribute("tag") == "856":
-                print(element)
-                for subfield in element.childNodes:
-                    print(subfield)
-                    if subfield.getAttribute("code") == "y":
-                        y = subfield.nodeValue
-                        print("y", y)
-                    if subfield.getAttribute("code") == "u":
-                        u = subfield.nodeValue
-                        print("u", u)
-                    if y is not None and u is not None:
-                        found_files.append({"lang": y, "url": u})
-        except AttributeError:
-            pass
+    if total_results == 1:
+        # Find the record element
+        record_element = doc.getElementsByTagName("record")[0]
 
-    # Extract the value from the controlfield element
-    controlfield_value = None
-    if controlfield_element:
-        controlfield_value = controlfield_element.firstChild.nodeValue
+        # Find the English file if it exists; return 001 otherwise
+        controlfield_element = None
+        found_file = None
+        for element in record_element.childNodes:
+            u = None
+            y = None
+            try:
+                if element.tagName == "controlfield" and element.getAttribute("tag") == "001":
+                    controlfield_element = element
+                elif element.tagName == "datafield" and element.getAttribute("tag") == "856":
+                    subfields = element.getElementsByTagName("subfield")
+                    for subfield in subfields:
+                        if subfield.getAttribute("code") == "y":
+                            y = subfield.childNodes[0].nodeValue
+                        if subfield.getAttribute("code") == "u":
+                            u = subfield.childNodes[0].nodeValue
+                        if y == 'English' and u is not None:
+                            found_file = {"lang": y, "url": u}
+            except AttributeError:
+                pass
+        
+        # Extract the value from the controlfield element
+        controlfield_value = None
+        if controlfield_element:
+            controlfield_value = controlfield_element.firstChild.nodeValue
 
-    # Print the results
-    print(f"Total number of results: {total_results}")
-    print(f"Controlfield value (tag 001): {controlfield_value}")
-    print(found_files)
-    
+        # Print the results
+        #print(f"Total number of results: {total_results}")
+        #print(f"Controlfield value (tag 001): {controlfield_value}")
+        #print(found_file)
+
+        if found_file is not None:
+            return_data.append({'name': 'undl', 'url': found_file['url']})
+    print(return_data)
     return return_data

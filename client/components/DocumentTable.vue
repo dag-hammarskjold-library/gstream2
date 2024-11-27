@@ -24,7 +24,10 @@
                         </span>
                     </td>
                     <td class="px-6 py-4">
-                        <pre class="text-sm">{{ JSON.stringify(doc.links, null, 2) }}</pre>
+                        <p v-for="link in doc.links">
+                            <a :href="link['url']">{{ link['name'] }}</a>
+                        </p>
+                        <!--<pre class="text-sm">{{ JSON.stringify(doc.links, null, 2) }}</pre>-->
                     </td>
                 </tr>
             </tbody>

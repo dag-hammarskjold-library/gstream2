@@ -7,6 +7,7 @@ charset-normalizer
 click
 fastapi
 #gdoc_api @ git+https://github.com/dag-hammarskjold-library/gdoc-api
+gdoc_api @ git+https://github.com/dag-hammarskjold-library/gdoc-api@948317cd38c91c9a4f0baece13e6eba883beb294
 h11
 idna
 jmespath

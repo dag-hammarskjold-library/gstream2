@@ -6,9 +6,9 @@ Run this in Docker using docker-compose, e.g.,
 
 Then navigate to http://localhost to see the app
 
-Or run the individual components (Nuxt and FastAPI)
+Or run the individual components (Nuxt and FastAPI) via two terminals:
 
-1. `NUXT_PUBLIC_API_BASE=http://0.0.0.0:8000 npm run dev`
-2. `GDOC_ENV="prod" uvicorn api:app --host 0.0.0.0 --port 8000`
+1. `cd client && NUXT_PUBLIC_API_BASE=http://0.0.0.0:8000 npm run dev`
+2. `cd server && GDOC_ENV="prod" uvicorn api:app --host 0.0.0.0 --port 8000`
 
 And you can see this operating on http://0.0.0.0:3000

@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import type { Document, TableHeader } from '~/types/document'
 
-defineProps<{
+const props = defineProps<{
     documents: Document[]
     headers: TableHeader[]
     sortKey: keyof Document

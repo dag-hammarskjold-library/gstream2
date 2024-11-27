@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   modules: ['dayjs-nuxt', '@nuxtjs/tailwindcss'],
   runtimeConfig: {
     public: {
-      apiBase: 'http://0.0.0.0:8000'
+      apiBase: 'http://[::]:8000'
     }
   },
   app: {

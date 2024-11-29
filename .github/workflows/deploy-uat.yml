@@ -1,0 +1,40 @@
+name: Deploy to ECS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{secrets.AWS_REGION}}  
+
+      - name: Build and Push FastAPI Image
+        run: |
+          cd server
+          docker build -t gstream/fastapi:latest .
+          docker tag gstream/fastapi:latest ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com/gstream/fastapi:latest
+          aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          docker push ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com/gstream/fastapi:latest
+
+      - name: Build and Push Nuxt Image
+        run: |
+          cd client
+          docker build -t gstream/nuxt:latest .
+          docker tag gstream/nuxt:latest ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com/gstream/nuxt:latest
+          aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          docker push ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com/gstream/nuxt:latest
+
+      - name: Update ECS Task Definition
+        run: |
+          aws ecs update-service --cluster gstream-cluster --service my-service --task-definition my-task-definition
+
+      # ... Additional steps for updating the ECS service with the new task definition ...

@@ -33,8 +33,16 @@ jobs:
           aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com
           docker push ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com/gstream/nuxt:latest
 
+      - name: Build the nginx container
+        run: |
+          cd nginx
+          docker build -t gstream/nginx:latest .
+          docker tag gstream/nginx:latest ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com/gstream/nginx:latest
+          aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          docker push ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${AWS_REGION}.amazonaws.com/gstream/nginx:latest
+
       - name: Update ECS Task Definition
         run: |
-          aws ecs update-service --cluster gstream-cluster --service my-service --task-definition my-task-definition
+          aws ecs update-service --cluster gstreamCluster --service gstreamService --task-definition gstreamTaskDefinition
 
       # ... Additional steps for updating the ECS service with the new task definition ...
